@@ -1,1 +1,39 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Маршруты в сервисные центры</title><link rel="stylesheet" href="style.css"></head><body><header><strong>Доставка в сервисные центры</strong><span>Заявки и маршрутный лист водителя</span></header><main><section><h2>Новая заявка</h2><form id="form"><label for="tool">Инструмент *</label><input id="tool" required placeholder="Например, перфоратор Bosch GBH 2-26"><label for="address">Адрес сервисного центра *</label><input id="address" required placeholder="Город, улица, дом"><label for="phone">Телефон СЦ *</label><input id="phone" required type="tel" placeholder="+7 999 123-45-67"><label for="ticket">Номер обращения</label><input id="ticket" placeholder="Для сверки с 1С"><label for="comment">Комментарий водителю</label><textarea id="comment" placeholder="Контактное лицо, время приёма, что передать"></textarea><p><button type="submit">Добавить точку</button></p></form><div class="export"><label for="origin">Откуда выезжает водитель</label><input id="origin" placeholder="Город, улица, дом"><p class="fieldhint">Для автоматического порядка точек укажите полный адрес отправления.</p><div class="row" style="margin-top:16px"><button id="optimize" type="button">Построить порядок</button><button id="reset" class="secondary" type="button">Исходный порядок</button></div><div id="message" class="message" role="status"></div></div></section><section><div class="row top"><div><h2 style="margin-bottom:5px">Маршрутный лист</h2><div id="summary" class="meta"></div></div><span class="pill" id="date"></span></div><div class="row controls"><button id="excel" type="button" class="secondary">Скачать для Excel</button><button id="print" type="button" class="secondary">Печать</button></div><div id="stops" class="stops"></div></section></main><script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10243f"><meta name="description" content="Обращения, рейсы и звонки в сервисные центры.">
+<title>Журнал диагностики</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%233972ec'/%3E%3Ctext x='24' y='31' text-anchor='middle' font-family='Arial,sans-serif' font-weight='bold' font-size='22' fill='white'%3E%D0%A1%D0%A6%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css"><script defer src="app.js"></script></head>
+<body><div class="app" id="shell">
+<header class="app-header"><div class="header-inner">
+<button class="brand" data-act="tab" data-id="cases"><span class="brand-mark" aria-hidden="true">СЦ</span><span><strong>Журнал диагностики</strong><small>Заявки и лист водителя</small></span></button>
+<div class="header-actions"><span id="headState" class="local-label">Журнал на этом ПК</span><button type="button" class="header-button" data-act="storage" id="storeBtn"><span aria-hidden="true">⇄</span> Обмен между ПК</button></div>
+</div></header>
+<main class="shell">
+<div class="page-heading"><div><p class="eyebrow">Диспетчерская</p><h1 id="pageTitle">Маршрутный лист</h1><p class="heading-note" id="pageNote">Доставки на диагностику и задания водителю.</p></div><div class="today" id="pageKicker"></div></div>
+<section class="summary" aria-label="Сводка по журналу">
+<div class="summary-item"><span>Активных заявок</span><strong id="countOpen">0</strong></div><div class="summary-item"><span>В листах водителя</span><strong id="countTools">0</strong></div><div class="summary-item"><span>Остановок в рейсах</span><strong id="countStops">0</strong></div>
+<div class="summary-help">Порядок остановок в рейсе: сначала срочные, затем с ближайшей датой доставки.</div></section>
+<div class="handoff" id="statusBar" role="status"></div>
+<nav class="tabs" aria-label="Разделы"><button class="tab" data-act="tab" data-id="cases">Маршрут и заявки</button><button class="tab" data-act="tab" data-id="trips">Рейсы</button><button class="tab" data-act="tab" data-id="calls">Звонки</button><button class="tab" data-act="tab" data-id="history">Выполненные</button><button class="tab" data-act="tab" data-id="centers">Адреса СЦ <span class="tab-count" id="countCenters">0</span></button></nav>
+<div class="workspace" id="work">
+<aside class="panel compose-panel" id="compose" aria-label="Оформление обращения">
+<div class="panel-head"><div><span class="section-kicker">Оформление</span><h2>Новая доставка</h2></div><span class="panel-symbol" aria-hidden="true">＋</span></div>
+<form id="deskForm">
+<div class="field"><label for="qTicket">Номер обращения <span class="required">*</span></label><input id="qTicket" name="ticket" required maxlength="80" placeholder="Например, 123456"></div>
+<div class="field"><label for="qItem">Инструмент <span class="required">*</span></label><input id="qItem" name="item" required maxlength="160" placeholder="Наименование и модель"></div>
+<div class="field"><div class="field-title"><label for="qCenter">Сервисный центр <span class="required">*</span></label><button type="button" class="inline-action" data-act="deskCenter">+ Новый СЦ</button></div><select id="qCenter" name="centerId" required><option value="">Выберите СЦ</option></select>
+<div id="deskHints"></div></div><div class="center-preview" id="deskMap" hidden></div>
+<div class="form-grid"><div class="field"><label for="qPri">Приоритет</label><select id="qPri" name="priority"><option value="normal">Обычный</option><option value="urgent">Срочно</option><option value="critical">Критично</option></select></div><div class="field"><label for="qDue">Доставить до</label><input id="qDue" name="due" type="date"></div></div>
+<div class="field"><label for="qNote">Комментарий водителю</label><textarea id="qNote" name="note" rows="2" maxlength="800" placeholder="Что уточнить или кому передать"></textarea></div>
+<div class="field"><label for="qStep">Следующий шаг</label><select id="qStep" name="step"><option value="drop">Едем в СЦ</option><option value="pick">Забираем из СЦ</option><option value="call">Позвонить в СЦ</option><option value="none">Назначить позже</option></select></div>
+<div class="field" id="qWhen"><label for="qDate" id="qDateLabel">Дата выезда</label><input id="qDate" type="date" name="stepDate" required></div>
+<div class="field" id="qTripWrap"><label for="qTrip">Рейс на эту дату</label><select id="qTrip" name="tripId"></select></div>
+<p id="deskError" class="formErr" role="alert"></p><button class="button button-primary submit-button" type="submit" id="deskSubmit">Добавить в маршрут</button></form></aside>
+<section class="panel queue-panel" aria-labelledby="queueTitle"><div class="queue-top"><div><span class="section-kicker" id="queueKicker">Маршрут</span><h2 id="queueTitle">Пункты доставки</h2><p id="queueNote"></p></div><div class="btnrow" id="pageButtons"></div></div>
+<div class="queue-controls"><div class="btnrow" id="filters"></div><label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input type="search" id="search" aria-label="Поиск по всем обращениям" placeholder="Обращение, СЦ или инструмент"></label></div>
+<div class="queue-list" id="content" aria-label="Рабочий журнал"></div></section></div>
+<footer class="footnote">Журнал диагностики · Перед сменой компьютера проверьте состояние общей папки.</footer></main></div>
+<dialog id="modal" aria-labelledby="modalTitle"><div class="dlghead"><div><p id="modalKicker" class="section-kicker"></p><h2 id="modalTitle"></h2></div><button id="close" aria-label="Закрыть" class="close">×</button></div><div id="modalContent"></div></dialog>
+<div id="toast" role="status"></div><section id="paper" aria-label="Документ для печати"></section>
+<noscript>Для работы журнала включите JavaScript.</noscript></body></html>
